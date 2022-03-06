@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    // fixes primary color issues
+    <color name="colorPrimary">@color/green_1</color>
+    <color name="colorPrimaryDark">@color/dark_green_1</color>
+    <color name="colorAccent">@color/green_3</color>
+
+    <color name="green_1">#40916c</color>
+    <color name="green_2">#52b788</color>
+    <color name="green_3">#b7e4c7</color>
+    <color name="dark_green_1">#2d6a4f</color>
+    <color name="dark_green_2">#1b4332</color>
+    <color name="dark_green_3">#081c15</color>
+    <color name="beige">#dad7cd</color> //f0ead2 (warmer option)
+
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
