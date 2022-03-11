@@ -1,76 +1,124 @@
 package com.example.myapplication;
 
+import android.os.Build;
 import android.os.Bundle;
 
-import com.google.android.material.snackbar.Snackbar;
-
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.view.View;
-
-import androidx.navigation.NavController;
-import androidx.navigation.Navigation;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
-
-import com.example.myapplication.databinding.ActivityMainBinding;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.view.Menu;
-import android.view.MenuItem;
+import android.widget.Toast;
+
+import com.example.myapplication.API.RecipeModel;
+import com.example.myapplication.API.RecipeRVAdapter;
+import com.example.myapplication.API.tastyAPIHandler;
+import com.example.myapplication.models.Recipe;
+import com.example.myapplication.util.Constants;
+
+import java.util.ArrayList;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
-    private AppBarConfiguration appBarConfiguration;
-    private ActivityMainBinding binding;
+    // main toolbar
+    private Toolbar mToolbar;
+    // feed recyclerview
+    RecyclerView recyclerView;
+    private RecyclerView.LayoutManager layoutManager;
+    // store the data for recyclerview
+    ArrayList<Recipe> recipes = new ArrayList<>();
+    // list of ingredients to search for
+    ArrayList<String> ingredients = new ArrayList<>();
+    RecipeRVAdapter recipeRVAdapter;
 
+    // due to Tasty API requests
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        // main toolbar
+        mToolbar = findViewById(R.id.main_toolbar);
+        setSupportActionBar(mToolbar);
 
-        setSupportActionBar(binding.toolbar);
+        // feed recyclerview
+        recyclerView = findViewById(R.id.recipeView);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        recipeRVAdapter = new RecipeRVAdapter(this, recipes);
+        recyclerView.setAdapter(recipeRVAdapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setNestedScrollingEnabled(false);
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
+        ingredients.add("onion");
+        ingredients.add("tomato");
+        getRecipes(ingredients);
 
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
+        super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private void getRecipes(ArrayList<String> ingredients){
+        recipes.clear();
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+        String baseUrl = Constants.BASE_URL;
+        String listUrl = Constants.LIST_URL + "&rapidapi-key=" + Constants.API_KEY;
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        tastyAPIHandler tastyAPIHandler = retrofit.create(tastyAPIHandler.class);
+        Call<RecipeModel> call;
+
+        // get ingredients into the url
+        String parameters = "";
+        if (ingredients.size() != 0){
+            parameters = "&p=" + ingredients.stream()
+                    .map(ingredient -> ingredient.toString() + "%20")
+                    .reduce("", String::concat);
+            parameters = parameters.substring(0, parameters.length() - 3);
         }
+        listUrl = listUrl.concat(parameters);
+        System.out.println("URL !!!!!!!!!!!!!!!!!!!!!!!!! : "+  listUrl);
+        call = tastyAPIHandler.getRecipesWithIngredients(listUrl);
+        call.enqueue(new Callback<RecipeModel>() {
+            @Override
+            public void onResponse(Call<RecipeModel> call, Response<RecipeModel> response) {
+                RecipeModel recipeModel = response.body();
+                if (response.isSuccessful() && !response.body().getResults().isEmpty()){
+                    if (!recipes.isEmpty()){
+                        recipes.clear();
+                    }
+                    recipes = recipeModel.getResults();
+                    recipeRVAdapter = new RecipeRVAdapter(MainActivity.this, recipes);
+                    recyclerView.setAdapter(recipeRVAdapter);
+                    recipeRVAdapter.notifyDataSetChanged();
+                }else {
+                    Toast.makeText(MainActivity.this, "No results!", Toast.LENGTH_SHORT).show();
+                }
+            }
 
-        return super.onOptionsItemSelected(item);
-    }
+            @Override
+            public void onFailure(Call<RecipeModel> call, Throwable t) {
+                Toast.makeText(MainActivity.this, "API ERROR!", Toast.LENGTH_SHORT).show();
+            }
+        });
 
-    @Override
-    public boolean onSupportNavigateUp() {
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
-                || super.onSupportNavigateUp();
     }
 }
