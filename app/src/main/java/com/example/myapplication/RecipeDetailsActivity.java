@@ -1,16 +1,21 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Pair;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
@@ -39,7 +44,7 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
     // data to fill out the fields
     private Ingredients[] ingredientsData;
     private Instruction[] instructionsData;
-    private String titleData, secondaryTitleData, imgUrl;
+    private String titleData, secondaryTitleData, imgUrl, videoUrl;
 
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -71,6 +76,7 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
         //get intent data
         Intent intent = getIntent();
         imgUrl = intent.getStringExtra("imgUrl");
+        videoUrl = intent.getStringExtra("videoUrl");
         titleData = intent.getStringExtra("title");
         secondaryTitleData = intent.getStringExtra("secondaryTitle");
         instructionsData = (Instruction[]) intent.getSerializableExtra("instructions");
@@ -131,5 +137,30 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
             appbarTitle.setVisibility(View.GONE);
             toolbarIsHidden = !toolbarIsHidden;
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_recipe, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if(id == R.id.seeVideo){
+            // check if there is video content
+            if (videoUrl != null && !videoUrl.isEmpty()){
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(videoUrl));
+                // if other browser on the phone, it will ask user which one to use
+                startActivity(Intent.createChooser(i, "View in: "));
+                return true;
+            }else {
+                Toast.makeText(this,
+                        "No video to show for this recipe.", Toast.LENGTH_SHORT).show();
+            }
+        }
+        return false;
     }
 }

@@ -12,6 +12,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.Toast;
 
@@ -51,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private Toolbar mToolbar;
     // feed recyclerview
     RecyclerView recyclerView;
+    private ProgressBar progressBar;
     private RecyclerView.LayoutManager layoutManager;
     // store the data for recyclerview
     ArrayList<Recipe> recipes = new ArrayList<>();
@@ -64,6 +66,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // fetch progress bar
+        progressBar = findViewById(R.id.progressLoadRecipes);
 
         // main toolbar
         mToolbar = findViewById(R.id.main_toolbar);
@@ -100,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
                         intent.putExtra("title", recipe.getTitle());
                         intent.putExtra("secondaryTitle", recipe.getSecondaryTitle());
                         intent.putExtra("imgUrl", recipe.getThumbnailURL());
+                        intent.putExtra("videoUrl", recipe.getVideoUrl());
 
                         //image transition
                         Pair<View, String> pair =
@@ -141,6 +147,9 @@ public class MainActivity extends AppCompatActivity {
             @RequiresApi(api = Build.VERSION_CODES.N)
             @Override
             public boolean onQueryTextSubmit(String query) {
+                progressBar.setVisibility(View.VISIBLE);
+                recipes.clear();
+                recipeRVAdapter.notifyDataSetChanged();
                 if(query.length() > 2){
                     ArrayList<String> search;
                     // get ingredients as a list
@@ -149,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
                     // get rid of unnecessary whitespace
                     search.forEach(i -> i.trim());
                     getRecipes(search);
-
                 }
                 return false;
             }
@@ -170,7 +178,8 @@ public class MainActivity extends AppCompatActivity {
      */
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void getRecipes(ArrayList<String> ingredients){
-        recipes.clear();
+        progressBar.setVisibility(View.VISIBLE);
+
 
         String apiKey = Constants.API_KEY;
         String baseUrl = Constants.BASE_URL ;
@@ -206,6 +215,7 @@ public class MainActivity extends AppCompatActivity {
                     recipeRVAdapter = new RecipeRVAdapter(MainActivity.this, recipes);
                     recyclerView.setAdapter(recipeRVAdapter);
                     recipeRVAdapter.notifyDataSetChanged();
+                    progressBar.setVisibility(View.INVISIBLE);
                 }else {
                     Toast.makeText(MainActivity.this, "No results!", Toast.LENGTH_SHORT).show();
                 }

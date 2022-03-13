@@ -26,7 +26,6 @@ public class Recipe {
     @SerializedName("total_time_tier")
     @Expose
     private TimeTier totalTime;
-//    private String[][] ingredients;
     @SerializedName("num_servings")
     @Expose
     private int numberOfServings;
@@ -39,12 +38,15 @@ public class Recipe {
     @SerializedName("sections")
     @Expose
     private Ingredients[] ingredients;
+    @SerializedName("original_video_url")
+    @Expose
+    private String videoUrl;
     private int ingredientsOtherThanSearched;
     private String secondaryTitle;
 
     public Recipe(int id, String title, String thumbnailURL, TimeTier timeTier,
                   String language, Ingredients[] ingredients, Nutrition nutrition,
-                  int numberOfServings, Instruction[] instructions) {
+                  int numberOfServings, Instruction[] instructions, String videoUrl) {
         this.id = id;
         this.title = title;
         this.thumbnailURL = thumbnailURL;
@@ -54,6 +56,7 @@ public class Recipe {
         this.ingredients = ingredients;
         this.numberOfServings = numberOfServings;
         this.instructions = instructions;
+        this.videoUrl = videoUrl;
         this.ingredientsOtherThanSearched = -1;
     }
 
@@ -146,6 +149,14 @@ public class Recipe {
 
     public int getIngredientsOtherThanSearched() {
         return ingredientsOtherThanSearched;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 
     /**
