@@ -7,20 +7,22 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
-
-import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.DefaultItemAnimator;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
+import androidx.core.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.SearchView;
 import android.widget.Toast;
+
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityOptionsCompat;
+import androidx.core.view.ViewCompat;
+import androidx.recyclerview.widget.DefaultItemAnimator;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.API.RecipeModel;
 import com.example.myapplication.API.RecipeRVAdapter;
@@ -32,7 +34,6 @@ import com.example.myapplication.util.Constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import retrofit2.Call;
@@ -89,7 +90,8 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.addOnItemTouchListener(
                 new RecyclerItemClickListener(this, recyclerView ,new RecyclerItemClickListener.OnItemClickListener() {
                     @Override public void onItemClick(View view, int position) {
-                        System.out.println("CLICK *******************************************");
+                        ImageView imageView = view.findViewById(R.id.recipeThumbnail);
+
                         Intent intent = new Intent(MainActivity.this, RecipeDetailsActivity.class);
                         Recipe recipe = recipes.get(position);
                         // pass the recipe data
@@ -99,7 +101,19 @@ public class MainActivity extends AppCompatActivity {
                         intent.putExtra("secondaryTitle", recipe.getSecondaryTitle());
                         intent.putExtra("imgUrl", recipe.getThumbnailURL());
 
-                        startActivity(intent);
+                        //image transition
+                        Pair<View, String> pair =
+                                Pair.create((View) imageView, ViewCompat.getTransitionName(imageView));
+                        ActivityOptionsCompat optionsCompat = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                                MainActivity.this,
+                                pair
+                        );
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN){
+                            startActivity(intent, optionsCompat.toBundle());
+                        }
+                        else{
+                            startActivity(intent);
+                        }
                     }
 
                     @Override public void onLongItemClick(View view, int position) {
