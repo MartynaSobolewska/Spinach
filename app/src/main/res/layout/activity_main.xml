@@ -36,5 +36,6 @@
         tools:listitem="@layout/recipe_card">
 
     </androidx.recyclerview.widget.RecyclerView>
+    <include layout="@layout/error"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

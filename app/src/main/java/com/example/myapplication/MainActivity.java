@@ -11,9 +11,12 @@ import androidx.core.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.SearchView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
@@ -48,17 +51,22 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public class MainActivity extends AppCompatActivity {
 
+    // error
+    private RelativeLayout errorLayout;
+    private TextView errorTitle, errorMessage;
+    private Button refreshOnErrorBtn;
+
     // main toolbar
     private Toolbar mToolbar;
     // feed recyclerview
-    RecyclerView recyclerView;
+    private RecyclerView recyclerView;
     private ProgressBar progressBar;
     private RecyclerView.LayoutManager layoutManager;
     // store the data for recyclerview
-    ArrayList<Recipe> recipes = new ArrayList<>();
+    private ArrayList<Recipe> recipes = new ArrayList<>();
     // list of ingredients to search for
-    ArrayList<String> ingredients = new ArrayList<>();
-    RecipeRVAdapter recipeRVAdapter;
+    private ArrayList<String> ingredients = new ArrayList<>();
+    private RecipeRVAdapter recipeRVAdapter;
 
     // due to Tasty API requests
     @RequiresApi(api = Build.VERSION_CODES.Q)
@@ -66,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // error
+        errorLayout = findViewById(R.id.errorLayout);
+        errorTitle = findViewById(R.id.errorTitle);
+        errorMessage = findViewById(R.id.errorMessage);
+        refreshOnErrorBtn = findViewById(R.id.errorButton);
 
         // fetch progress bar
         progressBar = findViewById(R.id.progressLoadRecipes);
@@ -178,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
      */
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void getRecipes(ArrayList<String> ingredients){
+        errorLayout.setVisibility(View.GONE);
         progressBar.setVisibility(View.VISIBLE);
 
 
@@ -216,14 +231,30 @@ public class MainActivity extends AppCompatActivity {
                     recyclerView.setAdapter(recipeRVAdapter);
                     recipeRVAdapter.notifyDataSetChanged();
                     progressBar.setVisibility(View.INVISIBLE);
+                    errorLayout.setVisibility(View.INVISIBLE);
                 }else {
-                    Toast.makeText(MainActivity.this, "No results!", Toast.LENGTH_SHORT).show();
+                    String errorTitle, errorMessage;
+                    switch (response.code()){
+                        case 404:
+                            errorTitle = "404 not found";
+                            errorMessage = "Try again later";
+                            break;
+                        case 500:
+                            errorTitle = "500 server down";
+                            errorMessage = "Try again later";
+                        default:
+                            errorTitle = "No Results";
+                            errorMessage = "Search for ingredients separated with commas.";
+                    }
+                    showErrorLayout(errorTitle, errorMessage, ingredients);
                 }
             }
 
             @Override
             public void onFailure(Call<RecipeModel> call, Throwable t) {
-                Toast.makeText(MainActivity.this, "API ERROR!", Toast.LENGTH_SHORT).show();
+                showErrorLayout("Ooops...", "Network failure," +
+                                " please check your network connection."
+                        , ingredients);
             }
         });
     }
@@ -258,5 +289,21 @@ public class MainActivity extends AppCompatActivity {
                         && r.getInstructions() != null
                         && r.getInstructions().length > 0))
                 .collect(Collectors.toList()));
+    }
+
+    private void showErrorLayout(String title, String message, ArrayList<String> ingredients){
+        if (errorLayout.getVisibility() == View.GONE)
+            errorLayout.setVisibility(View.VISIBLE);
+
+        errorTitle.setText(title);
+        errorMessage.setText(message);
+
+        refreshOnErrorBtn.setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public void onClick(View v) {
+                getRecipes(ingredients);
+            }
+        });
     }
 }
