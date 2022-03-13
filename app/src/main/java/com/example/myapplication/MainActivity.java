@@ -1,5 +1,10 @@
 package com.example.myapplication;
 
+import static com.example.myapplication.models.Recipe.getAndSetNumberOfIngredientsOtherThanGiven;
+
+import android.app.SearchManager;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -12,15 +17,23 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.SearchView;
 import android.widget.Toast;
 
 import com.example.myapplication.API.RecipeModel;
 import com.example.myapplication.API.RecipeRVAdapter;
+import com.example.myapplication.API.RecyclerItemClickListener;
 import com.example.myapplication.API.tastyAPIHandler;
 import com.example.myapplication.models.Recipe;
 import com.example.myapplication.util.Constants;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -28,6 +41,9 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+/**
+ * Main activity setup - feed and recipe fetching
+ */
 public class MainActivity extends AppCompatActivity {
 
     // main toolbar
@@ -59,25 +75,91 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(recipeRVAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setNestedScrollingEnabled(false);
+        initListener();
 
-        ingredients.add("onion");
+        ingredients.add("spinach");
         ingredients.add("tomato");
         getRecipes(ingredients);
-
     }
 
+    /**
+     * Listener for Recipe card in RecyclerView
+     */
+    private void initListener(){
+        recyclerView.addOnItemTouchListener(
+                new RecyclerItemClickListener(this, recyclerView ,new RecyclerItemClickListener.OnItemClickListener() {
+                    @Override public void onItemClick(View view, int position) {
+                        System.out.println("CLICK *******************************************");
+                        Intent intent = new Intent(MainActivity.this, RecipeDetailsActivity.class);
+                        Recipe recipe = recipes.get(position);
+                        // pass the recipe data
+                        intent.putExtra("ingredients", recipe.getIngredients());
+                        intent.putExtra("instructions", recipe.getInstructions());
+                        intent.putExtra("title", recipe.getTitle());
+                        intent.putExtra("secondaryTitle", recipe.getSecondaryTitle());
+                        intent.putExtra("imgUrl", recipe.getThumbnailURL());
+
+                        startActivity(intent);
+                    }
+
+                    @Override public void onLongItemClick(View view, int position) {
+                        // do whatever
+                    }
+                }));
+    }
+
+    /**
+     * Sets up options menu and search option
+     * @param menu menu object
+     * @return false if set up fails, true if it succeeds.
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        final SearchView searchView = (SearchView) menu.findItem(R.id.actionSearch).getActionView();
+        MenuItem searchMenuItem = menu.findItem(R.id.actionSearch);
+
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setQueryHint("spinach, tomato...");
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                if(query.length() > 2){
+                    ArrayList<String> search;
+                    // get ingredients as a list
+                    search = new ArrayList<>(Arrays.asList(query
+                            .split(",")));
+                    // get rid of unnecessary whitespace
+                    search.forEach(i -> i.trim());
+                    getRecipes(search);
+
+                }
+                return false;
+            }
+
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+        searchMenuItem.getIcon().setVisible(false, false);
         return true;
     }
+
+    /**
+     * Fetches recipes from the API, refreshes the feed view
+     * @param ingredients additional parameters for the query (key words, ingredients to search for)
+     */
     @RequiresApi(api = Build.VERSION_CODES.N)
     private void getRecipes(ArrayList<String> ingredients){
         recipes.clear();
 
-        String baseUrl = Constants.BASE_URL;
-        String listUrl = Constants.LIST_URL + "&rapidapi-key=" + Constants.API_KEY;
+        String apiKey = Constants.API_KEY;
+        String baseUrl = Constants.BASE_URL ;
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl)
@@ -88,15 +170,15 @@ public class MainActivity extends AppCompatActivity {
 
         // get ingredients into the url
         String parameters = "";
-        if (ingredients.size() != 0){
-            parameters = "&p=" + ingredients.stream()
-                    .map(ingredient -> ingredient.toString() + "%20")
+        if (ingredients != null && ingredients.size() > 0){
+            parameters = ingredients.stream()
+                    .map(ingredient -> ingredient + "%20")
                     .reduce("", String::concat);
             parameters = parameters.substring(0, parameters.length() - 3);
-        }
-        listUrl = listUrl.concat(parameters);
-        System.out.println("URL !!!!!!!!!!!!!!!!!!!!!!!!! : "+  listUrl);
-        call = tastyAPIHandler.getRecipesWithIngredients(listUrl);
+            call = tastyAPIHandler.getRecipesWithIngredients(0, 40, apiKey, parameters);
+        }else
+            call = tastyAPIHandler.getAllRecipes(0, 40, apiKey);
+
         call.enqueue(new Callback<RecipeModel>() {
             @Override
             public void onResponse(Call<RecipeModel> call, Response<RecipeModel> response) {
@@ -105,7 +187,8 @@ public class MainActivity extends AppCompatActivity {
                     if (!recipes.isEmpty()){
                         recipes.clear();
                     }
-                    recipes = recipeModel.getResults();
+                    recipes = sortByLeastAmountOfOtherIngredients(recipeModel.getResults(), ingredients);
+                    recipes = filterOutIncompleteRecipes(recipes);
                     recipeRVAdapter = new RecipeRVAdapter(MainActivity.this, recipes);
                     recyclerView.setAdapter(recipeRVAdapter);
                     recipeRVAdapter.notifyDataSetChanged();
@@ -119,6 +202,37 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "API ERROR!", Toast.LENGTH_SHORT).show();
             }
         });
+    }
 
+    /**
+     * Sort a given list of recipes by the least amount of ingredients other than searched for.
+     * @param recipes list of recipes to filter
+     * @param ingredients list of ingredients that were searched for
+     * @return sorted list of recipes
+     */
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private ArrayList<Recipe> sortByLeastAmountOfOtherIngredients(ArrayList<Recipe> recipes, ArrayList<String> ingredients){
+        if (recipes == null || recipes.size() < 2)
+            return recipes;
+        recipes.sort(Comparator.comparingInt(r -> getAndSetNumberOfIngredientsOtherThanGiven(r, ingredients)));
+        return recipes;
+    }
+
+    /**
+     * Filters out  recipes that are not complete (without instructions, ingredients)
+     * @param recipes list of recipes to filter
+     * @return filtered list of correct recipes
+     */
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    private ArrayList<Recipe> filterOutIncompleteRecipes(ArrayList<Recipe> recipes){
+        if (recipes == null || recipes.isEmpty())
+            return recipes;
+        // get recipes with 1 or more instructions and 0 or more ingredients other than searched
+        return new ArrayList<Recipe>(recipes
+                .stream()
+                .filter(r -> (r.getIngredientsOtherThanSearched() >= 0
+                        && r.getInstructions() != null
+                        && r.getInstructions().length > 0))
+                .collect(Collectors.toList()));
     }
 }

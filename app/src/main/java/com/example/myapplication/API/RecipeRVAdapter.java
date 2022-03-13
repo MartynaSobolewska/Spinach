@@ -18,7 +18,6 @@ import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
-import com.bumptech.glide.module.AppGlideModule;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
@@ -78,8 +77,22 @@ public class RecipeRVAdapter extends RecyclerView.Adapter<RecipeRVAdapter.Recipe
                 .transition(DrawableTransitionOptions.withCrossFade())
                 .into(holder.image);
 
-        holder.title.setText(recipes.get(position).getTitle());
-        holder.description.setText(recipes.get(position).getLanguage());
+        holder.title.setText(recipes.get(position).getTitle().replaceAll("-", " "));
+        int servings = recipes.get(position).getNumberOfServings();
+        int otherIng = recipes.get(position).getIngredientsOtherThanSearched();
+        String bottomText = "";
+        if (servings > 1)
+            bottomText += (servings + " servings");
+        else
+            bottomText += (servings + " serving");
+        if (otherIng == 1)
+            bottomText += (", 1 other ingredient.");
+        else if (otherIng == 0)
+            System.out.println("");
+        else
+            bottomText += (", " + otherIng + " other ingredients.");
+        recipes.get(position).setSecondaryTitle(bottomText);
+        holder.portions.setText(bottomText);
     }
 
     @Override
@@ -88,7 +101,7 @@ public class RecipeRVAdapter extends RecyclerView.Adapter<RecipeRVAdapter.Recipe
     }
 
     public static class RecipeRVHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
-        private TextView title, description;
+        private TextView title, portions;
         private ImageView image;
         private ProgressBar progressBar;
         private OnItemClickListener onItemClickListener;
@@ -97,7 +110,7 @@ public class RecipeRVAdapter extends RecyclerView.Adapter<RecipeRVAdapter.Recipe
             super(itemView);
             itemView.setOnClickListener(this);
             title = itemView.findViewById(R.id.title);
-            description = itemView.findViewById(R.id.description);
+            portions = itemView.findViewById(R.id.portions);
             image = itemView.findViewById(R.id.recipeThumbnail);
             progressBar = itemView.findViewById(R.id.progressLoadRecipes);
 

@@ -2,10 +2,22 @@ package com.example.myapplication.API;
 
 import retrofit2.Call;
 import retrofit2.http.GET;
+import retrofit2.http.Query;
 import retrofit2.http.Url;
 
 
 public interface tastyAPIHandler {
-    @GET
-    Call<RecipeModel> getRecipesWithIngredients(@Url String url);
+    @GET("recipes/list?")
+    Call<RecipeModel> getRecipesWithIngredients(
+            @Query("from") int from,
+            @Query("size") int size,
+            @Query("rapidapi-key") String key,
+            @Query("q") String ingredients
+    );
+    @GET("recipes/list?")
+    Call<RecipeModel> getAllRecipes(
+            @Query("from") int from,
+            @Query("size") int size,
+            @Query("rapidapi-key") String key
+    );
 }
