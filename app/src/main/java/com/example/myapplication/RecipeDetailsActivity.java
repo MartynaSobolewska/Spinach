@@ -43,7 +43,6 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
     private Ingredients[] ingredientsData;
     private Instruction[] instructionsData;
     private String titleData, secondaryTitleData, imgUrl, videoUrl;
-    private boolean recipeIsSaved;
 
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -80,7 +79,6 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
         secondaryTitleData = intent.getStringExtra("secondaryTitle");
         instructionsData = (Instruction[]) intent.getSerializableExtra("instructions");
         ingredientsData = (Ingredients[]) intent.getSerializableExtra("ingredients");
-        recipeIsSaved = (boolean) intent.getSerializableExtra("saved");
 
         // load an img
         RequestOptions requestOptions = new RequestOptions();

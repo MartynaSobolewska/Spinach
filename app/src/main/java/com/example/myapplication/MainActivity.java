@@ -5,13 +5,10 @@ import static com.example.myapplication.models.Recipe.getAndSetNumberOfIngredien
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
-import androidx.core.app.NavUtils;
 import androidx.core.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -22,7 +19,6 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.SearchView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
@@ -33,14 +29,13 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication.API.RecipeModel;
+import com.example.myapplication.API.ResponseModel;
 import com.example.myapplication.API.RecipeRVAdapter;
 import com.example.myapplication.API.RecyclerItemClickListener;
 import com.example.myapplication.API.tastyAPIHandler;
 import com.example.myapplication.models.Recipe;
 import com.example.myapplication.sharedPreferences.SharedPref;
 import com.example.myapplication.util.Constants;
-import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -158,50 +153,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Sets up options menu and search option
-     * @param menu menu object
-     * @return false if set up fails, true if it succeeds.
-     */
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        final SearchView searchView = (SearchView) menu.findItem(R.id.actionSearch).getActionView();
-        MenuItem searchMenuItem = menu.findItem(R.id.actionSearch);
-
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setQueryHint("spinach, tomato...");
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                progressBar.setVisibility(View.VISIBLE);
-                recipes.clear();
-                recipeRVAdapter.notifyDataSetChanged();
-                if(query.length() > 2){
-                    ArrayList<String> search;
-                    // get ingredients as a list
-                    search = new ArrayList<>(Arrays.asList(query
-                            .split(",")));
-                    // get rid of unnecessary whitespace
-                    search.forEach(i -> i.trim());
-                    getRecipes(search);
-                }
-                return false;
-            }
-
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                return false;
-            }
-        });
-        searchMenuItem.getIcon().setVisible(false, false);
-        return true;
-    }
-
-    /**
      * Fetches recipes from the API, refreshes the feed view
      * @param ingredients additional parameters for the query (key words, ingredients to search for)
      */
@@ -211,15 +162,16 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
 
 
-        String apiKey = Constants.API_KEY;
-        String baseUrl = Constants.BASE_URL ;
+        String API_KEY = Constants.API_KEY;
+        String BASE_URL = Constants.BASE_URL ;
+        int SIZE = Constants.SIZE;
 
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(baseUrl)
+                .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         tastyAPIHandler tastyAPIHandler = retrofit.create(tastyAPIHandler.class);
-        Call<RecipeModel> call;
+        Call<ResponseModel> call;
 
         // get ingredients into the url
         String parameters = "";
@@ -229,34 +181,34 @@ public class MainActivity extends AppCompatActivity {
                     .reduce("", String::concat);
             parameters = parameters.substring(0, parameters.length() - 3);
             if (preferences.getVegetarianState()){
-                call = tastyAPIHandler.getRecipesWithTags(0, 50, apiKey,
+                call = tastyAPIHandler.getRecipesWithIngredientsAndTags(0, SIZE, API_KEY,
                         parameters, "vegetarian");
             }else if (preferences.getVeganState()){
-                call = tastyAPIHandler.getRecipesWithTags(0, 50, apiKey,
+                call = tastyAPIHandler.getRecipesWithIngredientsAndTags(0, SIZE, API_KEY,
                         parameters, "vegan");
             }else
-                call = tastyAPIHandler.getRecipesWithIngredients(0, 50, apiKey, parameters);
+                call = tastyAPIHandler.getRecipesWithIngredients(0, SIZE, API_KEY, parameters);
         }else{
             if (preferences.getVegetarianState()){
-                call = tastyAPIHandler.getAllRecipesWithTags(0, 50,
-                        apiKey, "vegetarian");
+                call = tastyAPIHandler.getAllRecipesWithTags(0, SIZE,
+                        API_KEY, "vegetarian");
             }
             else if(preferences.getVeganState()){
-                call = tastyAPIHandler.getAllRecipesWithTags(0, 50,
-                        apiKey, "vegan");
+                call = tastyAPIHandler.getAllRecipesWithTags(0, SIZE,
+                        API_KEY, "vegan");
             }else
-                call = tastyAPIHandler.getAllRecipes(0, 50, apiKey);
+                call = tastyAPIHandler.getAllRecipes(0, SIZE, API_KEY);
         }
 
-        call.enqueue(new Callback<RecipeModel>() {
+        call.enqueue(new Callback<ResponseModel>() {
             @Override
-            public void onResponse(Call<RecipeModel> call, Response<RecipeModel> response) {
-                RecipeModel recipeModel = response.body();
+            public void onResponse(Call<ResponseModel> call, Response<ResponseModel> response) {
+                ResponseModel responseModel = response.body();
                 if (response.isSuccessful() && !response.body().getResults().isEmpty()){
                     if (!recipes.isEmpty()){
                         recipes.clear();
                     }
-                    recipes = sortByLeastAmountOfOtherIngredients(recipeModel.getResults(), ingredients);
+                    recipes = sortByLeastAmountOfOtherIngredients(responseModel.getResults(), ingredients);
                     recipes = filterOutIncompleteRecipes(recipes);
                     // sometimes there are results but they are only incomplete recipes
                     if (recipes.isEmpty()) {
@@ -288,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<RecipeModel> call, Throwable t) {
+            public void onFailure(Call<ResponseModel> call, Throwable t) {
                 showErrorLayout("Ooops...", "Network failure," +
                                 " please check your network connection."
                         , ingredients);
@@ -364,5 +316,48 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return false;
+    }
+    /**
+     * Sets up options menu and search option
+     * @param menu menu object
+     * @return false if set up fails, true if it succeeds.
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        final SearchView searchView = (SearchView) menu.findItem(R.id.actionSearch).getActionView();
+        MenuItem searchMenuItem = menu.findItem(R.id.actionSearch);
+
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setQueryHint("spinach, tomato...");
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                progressBar.setVisibility(View.VISIBLE);
+                recipes.clear();
+                recipeRVAdapter.notifyDataSetChanged();
+                if(query.length() > 2){
+                    ArrayList<String> search;
+                    // get ingredients as a list
+                    search = new ArrayList<>(Arrays.asList(query
+                            .split(",")));
+                    // get rid of unnecessary whitespace
+                    search.forEach(i -> i.trim());
+                    getRecipes(search);
+                }
+                return false;
+            }
+
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+        searchMenuItem.getIcon().setVisible(false, false);
+        return true;
     }
 }

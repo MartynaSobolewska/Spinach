@@ -6,7 +6,7 @@ import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
 
-public class RecipeModel {
+public class ResponseModel {
     @SerializedName("count")
     @Expose
     private int count;
@@ -14,7 +14,7 @@ public class RecipeModel {
     @Expose
     private ArrayList<Recipe> results;
 
-    public RecipeModel(int count, ArrayList<Recipe> results) {
+    public ResponseModel(int count, ArrayList<Recipe> results) {
         this.count = count;
         this.results = results;
     }
