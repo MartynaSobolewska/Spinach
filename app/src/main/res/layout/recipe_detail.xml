@@ -50,7 +50,7 @@
                         <TextView
                             android:id="@+id/appbarTitle"
                             style="@style/Base.TextAppearance.AppCompat.Widget.ActionBar.Title"
-                            android:text="News for you"
+                            android:text="Recipe"
                             android:textSize="18dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

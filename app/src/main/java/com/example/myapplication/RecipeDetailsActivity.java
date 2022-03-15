@@ -1,6 +1,7 @@
 package com.example.myapplication;
 
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,14 +25,11 @@ import androidx.appcompat.widget.Toolbar;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.bumptech.glide.request.RequestOptions;
-import com.example.myapplication.models.Ingredient;
 import com.example.myapplication.models.Ingredients;
 import com.example.myapplication.models.Instruction;
 import com.example.myapplication.util.Utils;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
-
-import java.util.Arrays;
 
 public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLayout.OnOffsetChangedListener{
 
@@ -45,6 +43,7 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
     private Ingredients[] ingredientsData;
     private Instruction[] instructionsData;
     private String titleData, secondaryTitleData, imgUrl, videoUrl;
+    private boolean recipeIsSaved;
 
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -81,6 +80,7 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
         secondaryTitleData = intent.getStringExtra("secondaryTitle");
         instructionsData = (Instruction[]) intent.getSerializableExtra("instructions");
         ingredientsData = (Ingredients[]) intent.getSerializableExtra("ingredients");
+        recipeIsSaved = (boolean) intent.getSerializableExtra("saved");
 
         // load an img
         RequestOptions requestOptions = new RequestOptions();

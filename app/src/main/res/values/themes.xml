@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyApplication" parent="Theme.AppCompat.Light">
+    <style name="Theme.MyApplication.Light" parent="Theme.AppCompat.Light">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
@@ -16,7 +16,7 @@
         <item name="autoSizeMinTextSize">16dp</item>
     </style>
 
-    <style name="Theme.MyApplication.NoActionBar">
+    <style name="Theme.MyApplication.Light.NoActionBar" parent="Theme.MyApplication.Light">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
     </style>
@@ -26,4 +26,12 @@
     </style>
 
     <style name="Theme.MyApplication.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="Theme.MyApplication.Light.NoActionBar.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+    <style name="Theme.MyApplication.NoActionBar.AppBarOverlay"
+        parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="Theme.MyApplication.NoActionBar.PopupOverlay"
+        parent="ThemeOverlay.AppCompat.Light" />
 </resources>

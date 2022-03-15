@@ -14,8 +14,7 @@
         android:layout_width="100dp"
         android:layout_height="100dp"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="200dp"
-        android:layout_marginBottom="30dp"
+        android:layout_marginTop="?attr/actionBarSize"
         />
     <TextView
         android:id="@+id/errorTitle"

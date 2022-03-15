@@ -5,8 +5,13 @@ import static com.example.myapplication.models.Recipe.getAndSetNumberOfIngredien
 import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
+import androidx.core.app.NavUtils;
 import androidx.core.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -33,7 +38,9 @@ import com.example.myapplication.API.RecipeRVAdapter;
 import com.example.myapplication.API.RecyclerItemClickListener;
 import com.example.myapplication.API.tastyAPIHandler;
 import com.example.myapplication.models.Recipe;
+import com.example.myapplication.sharedPreferences.SharedPref;
 import com.example.myapplication.util.Constants;
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,12 +63,16 @@ public class MainActivity extends AppCompatActivity {
     private TextView errorTitle, errorMessage;
     private Button refreshOnErrorBtn;
 
+    // shared preferences
+    private SharedPref preferences;
+
     // main toolbar
     private Toolbar mToolbar;
     // feed recyclerview
     private RecyclerView recyclerView;
     private ProgressBar progressBar;
     private RecyclerView.LayoutManager layoutManager;
+
     // store the data for recyclerview
     private ArrayList<Recipe> recipes = new ArrayList<>();
     // list of ingredients to search for
@@ -80,6 +91,9 @@ public class MainActivity extends AppCompatActivity {
         errorTitle = findViewById(R.id.errorTitle);
         errorMessage = findViewById(R.id.errorMessage);
         refreshOnErrorBtn = findViewById(R.id.errorButton);
+
+        // preferences
+        preferences = new SharedPref(this);
 
         // fetch progress bar
         progressBar = findViewById(R.id.progressLoadRecipes);
@@ -120,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
                         intent.putExtra("secondaryTitle", recipe.getSecondaryTitle());
                         intent.putExtra("imgUrl", recipe.getThumbnailURL());
                         intent.putExtra("videoUrl", recipe.getVideoUrl());
+                        intent.putExtra("saved", recipe.isSaved());
 
                         //image transition
                         Pair<View, String> pair =
@@ -137,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override public void onLongItemClick(View view, int position) {
-                        // do whatever
+                        // do not do anything
                     }
                 }));
     }
@@ -213,9 +228,25 @@ public class MainActivity extends AppCompatActivity {
                     .map(ingredient -> ingredient + "%20")
                     .reduce("", String::concat);
             parameters = parameters.substring(0, parameters.length() - 3);
-            call = tastyAPIHandler.getRecipesWithIngredients(0, 40, apiKey, parameters);
-        }else
-            call = tastyAPIHandler.getAllRecipes(0, 40, apiKey);
+            if (preferences.getVegetarianState()){
+                call = tastyAPIHandler.getRecipesWithTags(0, 50, apiKey,
+                        parameters, "vegetarian");
+            }else if (preferences.getVeganState()){
+                call = tastyAPIHandler.getRecipesWithTags(0, 50, apiKey,
+                        parameters, "vegan");
+            }else
+                call = tastyAPIHandler.getRecipesWithIngredients(0, 50, apiKey, parameters);
+        }else{
+            if (preferences.getVegetarianState()){
+                call = tastyAPIHandler.getAllRecipesWithTags(0, 50,
+                        apiKey, "vegetarian");
+            }
+            else if(preferences.getVeganState()){
+                call = tastyAPIHandler.getAllRecipesWithTags(0, 50,
+                        apiKey, "vegan");
+            }else
+                call = tastyAPIHandler.getAllRecipes(0, 50, apiKey);
+        }
 
         call.enqueue(new Callback<RecipeModel>() {
             @Override
@@ -227,6 +258,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                     recipes = sortByLeastAmountOfOtherIngredients(recipeModel.getResults(), ingredients);
                     recipes = filterOutIncompleteRecipes(recipes);
+                    // sometimes there are results but they are only incomplete recipes
+                    if (recipes.isEmpty()) {
+                        showErrorLayout("No results",
+                                "Search for ingredients separated with commas.", ingredients);
+                        return;
+                    }
                     recipeRVAdapter = new RecipeRVAdapter(MainActivity.this, recipes);
                     recyclerView.setAdapter(recipeRVAdapter);
                     recipeRVAdapter.notifyDataSetChanged();
@@ -291,6 +328,12 @@ public class MainActivity extends AppCompatActivity {
                 .collect(Collectors.toList()));
     }
 
+    /**
+     * Displays an error layout in case of an API error
+     * @param title Title of the error
+     * @param message message of the error
+     * @param ingredients that were searched for to pass if refresh button hit
+     */
     private void showErrorLayout(String title, String message, ArrayList<String> ingredients){
         if (errorLayout.getVisibility() == View.GONE)
             errorLayout.setVisibility(View.VISIBLE);
@@ -305,5 +348,21 @@ public class MainActivity extends AppCompatActivity {
                 getRecipes(ingredients);
             }
         });
+    }
+
+    /**
+     * Handles the option item in top menu
+     * @param item the item clicked
+     * @return true if succeeds menu item action
+     */
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if(id == R.id.actionSettings) {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        return false;
     }
 }

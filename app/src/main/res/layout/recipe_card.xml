@@ -10,7 +10,6 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/recipeCard"
-        app:checkedIcon="@drawable/ic_saved"
         android:clickable="true"
         android:backgroundTint="@color/beige"
         android:layout_width="match_parent"

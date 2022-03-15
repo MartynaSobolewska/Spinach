@@ -43,11 +43,13 @@ public class Recipe {
     private String videoUrl;
     private int ingredientsOtherThanSearched;
     private String secondaryTitle;
+    private boolean saved;
 
     public Recipe(int id, String title, String thumbnailURL, TimeTier timeTier,
-                  String language, Ingredients[] ingredients, Nutrition nutrition,
+                  String language, Ingredients[] ingredients, Nutrition nutrition, boolean saved,
                   int numberOfServings, Instruction[] instructions, String videoUrl) {
         this.id = id;
+        this.saved = saved;
         this.title = title;
         this.thumbnailURL = thumbnailURL;
         this.totalTime = timeTier;
@@ -74,6 +76,14 @@ public class Recipe {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public boolean isSaved() {
+        return saved;
+    }
+
+    public void setSaved(boolean saved) {
+        this.saved = saved;
     }
 
     public String getThumbnailURL() {
