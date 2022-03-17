@@ -25,22 +25,6 @@ public class Ingredient implements Serializable {
         this.comment = comment;
     }
 
-    public String getIngredientText() {
-        return ingredientText;
-    }
-
-    public void setIngredientText(String ingredientTexts) {
-        this.ingredientText = ingredientTexts;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
     /**
      * Turns the information stored in the ingredient class into a pair object.
      * Useful to hide multi-layer json structure.

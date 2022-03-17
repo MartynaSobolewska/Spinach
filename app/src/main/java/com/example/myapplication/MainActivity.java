@@ -1,6 +1,7 @@
 package com.example.myapplication;
 
-import static com.example.myapplication.models.Recipe.getAndSetNumberOfIngredientsOtherThanGiven;
+import static com.example.myapplication.models.Recipe.filterOutIncompleteRecipes;
+import static com.example.myapplication.models.Recipe.sortByLeastAmountOfOtherIngredients;
 
 import android.app.SearchManager;
 import android.content.Context;
@@ -39,8 +40,7 @@ import com.example.myapplication.util.Constants;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -61,17 +61,14 @@ public class MainActivity extends AppCompatActivity {
     // shared preferences
     private SharedPref preferences;
 
-    // main toolbar
-    private Toolbar mToolbar;
     // feed recyclerview
     private RecyclerView recyclerView;
     private ProgressBar progressBar;
-    private RecyclerView.LayoutManager layoutManager;
 
     // store the data for recyclerview
     private ArrayList<Recipe> recipes = new ArrayList<>();
     // list of ingredients to search for
-    private ArrayList<String> ingredients = new ArrayList<>();
+    private final ArrayList<String> ingredients = new ArrayList<>();
     private RecipeRVAdapter recipeRVAdapter;
 
     // due to Tasty API requests
@@ -94,7 +91,8 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressLoadRecipes);
 
         // main toolbar
-        mToolbar = findViewById(R.id.main_toolbar);
+        // main toolbar
+        Toolbar mToolbar = findViewById(R.id.main_toolbar);
         setSupportActionBar(mToolbar);
 
         // feed recyclerview
@@ -109,6 +107,63 @@ public class MainActivity extends AppCompatActivity {
         ingredients.add("spinach");
         ingredients.add("tomato");
         getRecipes(ingredients);
+    }
+
+    /**
+     * Sets up options menu and search option
+     * @param menu menu object
+     * @return false if set up fails, true if it succeeds.
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        final SearchView searchView = (SearchView) menu.findItem(R.id.actionSearch).getActionView();
+        MenuItem searchMenuItem = menu.findItem(R.id.actionSearch);
+
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setQueryHint("spinach, tomato...");
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                progressBar.setVisibility(View.VISIBLE);
+                recipes.clear();
+                recipeRVAdapter.notifyDataSetChanged();
+                if(query.length() > 2){
+                    ArrayList<String> search;
+                    // get ingredients as a list
+                    search = new ArrayList<>(Arrays.asList(query
+                            .split(",")));
+                    getRecipes(search);
+                }
+                return false;
+            }
+
+            @RequiresApi(api = Build.VERSION_CODES.N)
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+        searchMenuItem.getIcon().setVisible(false, false);
+        return true;
+    }
+    /**
+     * Handles the option item in top menu
+     * @param item the item clicked
+     * @return true if succeeds menu item action
+     */
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if(id == R.id.actionSettings) {
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -129,21 +184,15 @@ public class MainActivity extends AppCompatActivity {
                         intent.putExtra("secondaryTitle", recipe.getSecondaryTitle());
                         intent.putExtra("imgUrl", recipe.getThumbnailURL());
                         intent.putExtra("videoUrl", recipe.getVideoUrl());
-                        intent.putExtra("saved", recipe.isSaved());
 
                         //image transition
                         Pair<View, String> pair =
-                                Pair.create((View) imageView, ViewCompat.getTransitionName(imageView));
+                                Pair.create(imageView, ViewCompat.getTransitionName(imageView));
                         ActivityOptionsCompat optionsCompat = ActivityOptionsCompat.makeSceneTransitionAnimation(
                                 MainActivity.this,
                                 pair
                         );
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN){
-                            startActivity(intent, optionsCompat.toBundle());
-                        }
-                        else{
-                            startActivity(intent);
-                        }
+                        startActivity(intent, optionsCompat.toBundle());
                     }
 
                     @Override public void onLongItemClick(View view, int position) {
@@ -174,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
         Call<ResponseModel> call;
 
         // get ingredients into the url
-        String parameters = "";
+        String parameters;
         if (ingredients != null && ingredients.size() > 0){
             parameters = ingredients.stream()
                     .map(ingredient -> ingredient + "%20")
@@ -202,28 +251,30 @@ public class MainActivity extends AppCompatActivity {
 
         call.enqueue(new Callback<ResponseModel>() {
             @Override
-            public void onResponse(Call<ResponseModel> call, Response<ResponseModel> response) {
+            public void onResponse(@NonNull Call<ResponseModel> call, @NonNull Response<ResponseModel> response) {
                 ResponseModel responseModel = response.body();
-                if (response.isSuccessful() && !response.body().getResults().isEmpty()){
-                    if (!recipes.isEmpty()){
+                if (response.isSuccessful() &&
+                        !Objects.requireNonNull(response.body()).getResults().isEmpty()) {
+                    if (!recipes.isEmpty()) {
                         recipes.clear();
                     }
+                    assert responseModel != null;
                     recipes = sortByLeastAmountOfOtherIngredients(responseModel.getResults(), ingredients);
                     recipes = filterOutIncompleteRecipes(recipes);
                     // sometimes there are results but they are only incomplete recipes
                     if (recipes.isEmpty()) {
                         showErrorLayout("No results",
                                 "Search for ingredients separated with commas.", ingredients);
-                        return;
+                    } else {
+                        recipeRVAdapter = new RecipeRVAdapter(MainActivity.this, recipes);
+                        recyclerView.setAdapter(recipeRVAdapter);
+                        recipeRVAdapter.notifyDataSetChanged();
+                        progressBar.setVisibility(View.INVISIBLE);
+                        errorLayout.setVisibility(View.INVISIBLE);
                     }
-                    recipeRVAdapter = new RecipeRVAdapter(MainActivity.this, recipes);
-                    recyclerView.setAdapter(recipeRVAdapter);
-                    recipeRVAdapter.notifyDataSetChanged();
-                    progressBar.setVisibility(View.INVISIBLE);
-                    errorLayout.setVisibility(View.INVISIBLE);
-                }else {
+                } else {
                     String errorTitle, errorMessage;
-                    switch (response.code()){
+                    switch (response.code()) {
                         case 404:
                             errorTitle = "404 not found";
                             errorMessage = "Try again later";
@@ -231,6 +282,7 @@ public class MainActivity extends AppCompatActivity {
                         case 500:
                             errorTitle = "500 server down";
                             errorMessage = "Try again later";
+                            break;
                         default:
                             errorTitle = "No Results";
                             errorMessage = "Search for ingredients separated with commas.";
@@ -240,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<ResponseModel> call, Throwable t) {
+            public void onFailure(@NonNull Call<ResponseModel> call, @NonNull Throwable t) {
                 showErrorLayout("Ooops...", "Network failure," +
                                 " please check your network connection."
                         , ingredients);
@@ -249,43 +301,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Sort a given list of recipes by the least amount of ingredients other than searched for.
-     * @param recipes list of recipes to filter
-     * @param ingredients list of ingredients that were searched for
-     * @return sorted list of recipes
-     */
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private ArrayList<Recipe> sortByLeastAmountOfOtherIngredients(ArrayList<Recipe> recipes, ArrayList<String> ingredients){
-        if (recipes == null || recipes.size() < 2)
-            return recipes;
-        recipes.sort(Comparator.comparingInt(r -> getAndSetNumberOfIngredientsOtherThanGiven(r, ingredients)));
-        return recipes;
-    }
-
-    /**
-     * Filters out  recipes that are not complete (without instructions, ingredients)
-     * @param recipes list of recipes to filter
-     * @return filtered list of correct recipes
-     */
-    @RequiresApi(api = Build.VERSION_CODES.N)
-    private ArrayList<Recipe> filterOutIncompleteRecipes(ArrayList<Recipe> recipes){
-        if (recipes == null || recipes.isEmpty())
-            return recipes;
-        // get recipes with 1 or more instructions and 0 or more ingredients other than searched
-        return new ArrayList<Recipe>(recipes
-                .stream()
-                .filter(r -> (r.getIngredientsOtherThanSearched() >= 0
-                        && r.getInstructions() != null
-                        && r.getInstructions().length > 0))
-                .collect(Collectors.toList()));
-    }
-
-    /**
      * Displays an error layout in case of an API error
      * @param title Title of the error
      * @param message message of the error
      * @param ingredients that were searched for to pass if refresh button hit
      */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     private void showErrorLayout(String title, String message, ArrayList<String> ingredients){
         if (errorLayout.getVisibility() == View.GONE)
             errorLayout.setVisibility(View.VISIBLE);
@@ -293,71 +314,6 @@ public class MainActivity extends AppCompatActivity {
         errorTitle.setText(title);
         errorMessage.setText(message);
 
-        refreshOnErrorBtn.setOnClickListener(new View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public void onClick(View v) {
-                getRecipes(ingredients);
-            }
-        });
-    }
-
-    /**
-     * Handles the option item in top menu
-     * @param item the item clicked
-     * @return true if succeeds menu item action
-     */
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
-        if(id == R.id.actionSettings) {
-            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-            startActivity(intent);
-            return true;
-        }
-        return false;
-    }
-    /**
-     * Sets up options menu and search option
-     * @param menu menu object
-     * @return false if set up fails, true if it succeeds.
-     */
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        final SearchView searchView = (SearchView) menu.findItem(R.id.actionSearch).getActionView();
-        MenuItem searchMenuItem = menu.findItem(R.id.actionSearch);
-
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
-        searchView.setQueryHint("spinach, tomato...");
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                progressBar.setVisibility(View.VISIBLE);
-                recipes.clear();
-                recipeRVAdapter.notifyDataSetChanged();
-                if(query.length() > 2){
-                    ArrayList<String> search;
-                    // get ingredients as a list
-                    search = new ArrayList<>(Arrays.asList(query
-                            .split(",")));
-                    // get rid of unnecessary whitespace
-                    search.forEach(i -> i.trim());
-                    getRecipes(search);
-                }
-                return false;
-            }
-
-            @RequiresApi(api = Build.VERSION_CODES.N)
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                return false;
-            }
-        });
-        searchMenuItem.getIcon().setVisible(false, false);
-        return true;
+        refreshOnErrorBtn.setOnClickListener(v -> getRecipes(ingredients));
     }
 }

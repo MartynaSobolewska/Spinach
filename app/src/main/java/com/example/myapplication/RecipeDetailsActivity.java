@@ -1,7 +1,6 @@
 package com.example.myapplication;
 
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,22 +26,16 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.myapplication.models.Ingredients;
 import com.example.myapplication.models.Instruction;
-import com.example.myapplication.util.Utils;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 
+import java.util.Objects;
+
 public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLayout.OnOffsetChangedListener{
 
-    private ImageView imgView;
-    private TextView appbarTitle, title, secondaryTitle;
-    private ListView ingredients, instructions;
+    private TextView appbarTitle;
     private boolean toolbarIsHidden = false;
-    private AppBarLayout appBarLayout;
-    private Toolbar toolbar;
-    // data to fill out the fields
-    private Ingredients[] ingredientsData;
-    private Instruction[] instructionsData;
-    private String titleData, secondaryTitleData, imgUrl, videoUrl;
+    private String videoUrl;
 
 
     @RequiresApi(api = Build.VERSION_CODES.N)
@@ -52,37 +45,37 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
         setContentView(R.layout.recipe_detail);
 
         // toolbar setup
-        toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("");
+        Objects.requireNonNull(getSupportActionBar()).setTitle("");
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         final CollapsingToolbarLayout collapsingToolbarLayout = findViewById(R.id.collapsing_toolbar);
         collapsingToolbarLayout.setTitle("");
 
-        appBarLayout = findViewById(R.id.appbar);
+        AppBarLayout appBarLayout = findViewById(R.id.appbar);
         appBarLayout.addOnOffsetChangedListener(this);
 
         // find all other views
-        imgView = findViewById(R.id.backdrop);
+        ImageView imgView = findViewById(R.id.backdrop);
         appbarTitle = findViewById(R.id.appbarTitle);
-        title = findViewById(R.id.title);
-        secondaryTitle = findViewById(R.id.secondaryTitle);
-        ingredients = findViewById(R.id.ingredientsList);
-        instructions = findViewById(R.id.instructionsList);
+        TextView title = findViewById(R.id.title);
+        TextView secondaryTitle = findViewById(R.id.secondaryTitle);
+        ListView ingredients = findViewById(R.id.ingredientsList);
+        ListView instructions = findViewById(R.id.instructionsList);
 
         //get intent data
         Intent intent = getIntent();
-        imgUrl = intent.getStringExtra("imgUrl");
+        String imgUrl = intent.getStringExtra("imgUrl");
         videoUrl = intent.getStringExtra("videoUrl");
-        titleData = intent.getStringExtra("title");
-        secondaryTitleData = intent.getStringExtra("secondaryTitle");
-        instructionsData = (Instruction[]) intent.getSerializableExtra("instructions");
-        ingredientsData = (Ingredients[]) intent.getSerializableExtra("ingredients");
+        String titleData = intent.getStringExtra("title");
+        String secondaryTitleData = intent.getStringExtra("secondaryTitle");
+        Instruction[] instructionsData = (Instruction[]) intent.getSerializableExtra("instructions");
+        // data to fill out the fields
+        Ingredients[] ingredientsData = (Ingredients[]) intent.getSerializableExtra("ingredients");
 
         // load an img
         RequestOptions requestOptions = new RequestOptions();
-        requestOptions.error(Utils.getRandomDrawbleColor());
 
         Glide.with(this)
                 .load(imgUrl)
@@ -102,8 +95,8 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
         for (int i = 0; i < ingredientStringArray.length; i++) {
             ingredientStringArray[i] = formattedIngredients[i].first + " " + formattedIngredients[i].second;
         }
-        ArrayAdapter ingredientAdapter =
-                new ArrayAdapter<String>(this, R.layout.activity_listview, ingredientStringArray);
+        ArrayAdapter<String> ingredientAdapter =
+                new ArrayAdapter<>(this, R.layout.activity_listview, ingredientStringArray);
         ingredients.setAdapter(ingredientAdapter);
 
         // instructions
@@ -111,8 +104,8 @@ public class RecipeDetailsActivity extends AppCompatActivity implements AppBarLa
         for (int i = 0; i < instructionsStringArray.length; i++) {
             instructionsStringArray[i] = i+1 + ". " + instructionsData[i].getText();
         }
-        ArrayAdapter instructionsAdapter =
-                new ArrayAdapter<String>(this, R.layout.activity_listview, instructionsStringArray);
+        ArrayAdapter<String> instructionsAdapter =
+                new ArrayAdapter<>(this, R.layout.activity_listview, instructionsStringArray);
         instructions.setAdapter(instructionsAdapter);
 
     }

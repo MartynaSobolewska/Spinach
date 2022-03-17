@@ -8,7 +8,7 @@ import java.io.Serializable;
 public class Instruction implements Serializable {
     @SerializedName("display_text")
     @Expose
-    private String text;
+    private final String text;
 
     public Instruction(String text) {
         this.text = text;
@@ -18,7 +18,4 @@ public class Instruction implements Serializable {
         return text;
     }
 
-    public void setText(String text) {
-        this.text = text;
-    }
 }

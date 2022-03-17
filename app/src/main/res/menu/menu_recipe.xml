@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/seeVideo"
-        android:title="See video"
+        android:title="@string/see_video"
         android:icon="@drawable/ic_video"
         app:showAsAction="always" />
 </menu>

@@ -33,7 +33,6 @@ import java.util.ArrayList;
 public class RecipeRVAdapter extends RecyclerView.Adapter<RecipeRVAdapter.RecipeRVHolder> {
     ArrayList<Recipe> recipes;
     Context context;
-    private OnItemClickListener onItemClickListener;
 
     public RecipeRVAdapter(Context ct, ArrayList<Recipe> recipes){
         context = ct;
@@ -44,7 +43,7 @@ public class RecipeRVAdapter extends RecyclerView.Adapter<RecipeRVAdapter.Recipe
     public RecipeRVHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(context);
         View view = inflater.inflate(R.layout.recipe_card, parent, false);
-        return new RecipeRVHolder(view, onItemClickListener);
+        return new RecipeRVHolder(view);
     }
 
     @Override
@@ -100,34 +99,15 @@ public class RecipeRVAdapter extends RecyclerView.Adapter<RecipeRVAdapter.Recipe
         return recipes.size();
     }
 
-    public static class RecipeRVHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
+    public static class RecipeRVHolder extends RecyclerView.ViewHolder{
         private TextView title, portions;
         private ImageView image;
-        private ProgressBar progressBar;
-        private OnItemClickListener onItemClickListener;
 
-        public RecipeRVHolder(@NonNull View itemView, OnItemClickListener onItemClickListener) {
+        public RecipeRVHolder(@NonNull View itemView) {
             super(itemView);
-            itemView.setOnClickListener(this);
             title = itemView.findViewById(R.id.title);
             portions = itemView.findViewById(R.id.portions);
             image = itemView.findViewById(R.id.recipeThumbnail);
-            progressBar = itemView.findViewById(R.id.progressLoadRecipes);
-
-            this.onItemClickListener = onItemClickListener;
         }
-
-        @Override
-        public void onClick(View v) {
-            onItemClickListener.onItemClick(v, getAdapterPosition());
-        }
-    }
-
-    public void setOnItemClickListener(OnItemClickListener onItemClickListener){
-        this.onItemClickListener = onItemClickListener;
-    }
-
-    public interface OnItemClickListener{
-        void onItemClick(View view, int position);
     }
 }

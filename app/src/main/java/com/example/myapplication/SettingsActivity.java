@@ -1,11 +1,7 @@
 package com.example.myapplication;
 
-import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.CheckBox;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,6 +11,8 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NavUtils;
 
 import com.example.myapplication.sharedPreferences.SharedPref;
+
+import java.util.Objects;
 
 public class SettingsActivity extends AppCompatActivity {
     CheckBox vegetarianCheck, veganCheck;
@@ -28,9 +26,9 @@ public class SettingsActivity extends AppCompatActivity {
 
         setContentView(R.layout.settings_activity);
 
-        toolbar = (Toolbar) findViewById(R.id.settingsToolbar);
+        toolbar = findViewById(R.id.settingsToolbar);
         setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
         veganCheck = findViewById(R.id.veganCheck);
@@ -67,12 +65,10 @@ public class SettingsActivity extends AppCompatActivity {
     }
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                NavUtils.navigateUpFromSameTask(this);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        if (item.getItemId() == android.R.id.home) {
+            NavUtils.navigateUpFromSameTask(this);
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 }

@@ -15,7 +15,7 @@
         android:layout_height="100dp"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="?attr/actionBarSize"
-        />
+        android:contentDescription="error image" />
     <TextView
         android:id="@+id/errorTitle"
         android:text="Error Title"

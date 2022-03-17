@@ -1,11 +1,16 @@
 package com.example.myapplication.models;
 
+import android.os.Build;
 import android.util.Pair;
+
+import androidx.annotation.RequiresApi;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 /**
  * Stores information about recipes obtained from Tasty API
@@ -19,10 +24,7 @@ public class Recipe {
     private String title; //slug
     @SerializedName("thumbnail_url")
     @Expose
-    private String thumbnailURL;
-    @SerializedName("language")
-    @Expose
-    private String language;
+    private final String thumbnailURL;
     @SerializedName("total_time_tier")
     @Expose
     private TimeTier totalTime;
@@ -43,17 +45,14 @@ public class Recipe {
     private String videoUrl;
     private int ingredientsOtherThanSearched;
     private String secondaryTitle;
-    private boolean saved;
 
     public Recipe(int id, String title, String thumbnailURL, TimeTier timeTier,
-                  String language, Ingredients[] ingredients, Nutrition nutrition, boolean saved,
+                  Ingredients[] ingredients, Nutrition nutrition,
                   int numberOfServings, Instruction[] instructions, String videoUrl) {
         this.id = id;
-        this.saved = saved;
         this.title = title;
         this.thumbnailURL = thumbnailURL;
         this.totalTime = timeTier;
-        this.language = language;
         this.nutrition = nutrition;
         this.ingredients = ingredients;
         this.numberOfServings = numberOfServings;
@@ -78,29 +77,10 @@ public class Recipe {
         this.title = title;
     }
 
-    public boolean isSaved() {
-        return saved;
-    }
-
-    public void setSaved(boolean saved) {
-        this.saved = saved;
-    }
-
     public String getThumbnailURL() {
         return thumbnailURL;
     }
 
-    public void setThumbnailURL(String thumbnailURL) {
-        this.thumbnailURL = thumbnailURL;
-    }
-
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
-    }
 
     public TimeTier getTotalTime() {
         return totalTime;
@@ -175,7 +155,7 @@ public class Recipe {
      */
     public void setIngredientsOtherThanSearched(ArrayList<String> ingredients) {
         Recipe r = this;
-        if (r==null || r.ingredients == null || r.ingredients[0].getIngredients() == null) {
+        if (r.ingredients == null || r.ingredients[0].getIngredients() == null) {
             // error value
             this.ingredientsOtherThanSearched = -2;
             return;
@@ -190,11 +170,11 @@ public class Recipe {
         Pair<String,String>[] ingredientsAndDescriptions = r.getIngredients()[0].getIngredients();
 
         // count the ingredients containing key words (from ingredients list)
-        for (int i = 0; i < ingredientsAndDescriptions.length; i++) {
+        for (Pair<String, String> ingredientsAndDescription : ingredientsAndDescriptions) {
             for (String ingredient :
                     ingredients) {
-                if (ingredientsAndDescriptions[i].first.contains(ingredient))
-                    matchingIngredients ++;
+                if (ingredientsAndDescription.first.contains(ingredient))
+                    matchingIngredients++;
             }
         }
         this.ingredientsOtherThanSearched = allIngredients - matchingIngredients;
@@ -209,7 +189,36 @@ public class Recipe {
     public static int getAndSetNumberOfIngredientsOtherThanGiven(Recipe r,
                                                                  ArrayList<String> ingredients){
         r.setIngredientsOtherThanSearched(ingredients);
-        int otherThanSearched = r.getIngredientsOtherThanSearched();
-        return otherThanSearched;
+        return r.getIngredientsOtherThanSearched();
+    }
+    /**
+     * Sort a given list of recipes by the least amount of ingredients other than searched for.
+     * @param recipes list of recipes to filter
+     * @param ingredients list of ingredients that were searched for
+     * @return sorted list of recipes
+     */
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public static ArrayList<Recipe> sortByLeastAmountOfOtherIngredients(ArrayList<Recipe> recipes, ArrayList<String> ingredients){
+        if (recipes == null || recipes.size() < 2)
+            return recipes;
+        recipes.sort(Comparator.comparingInt(r -> getAndSetNumberOfIngredientsOtherThanGiven(r, ingredients)));
+        return recipes;
+    }
+
+    /**
+     * Filters out  recipes that are not complete (without instructions, ingredients)
+     * @param recipes list of recipes to filter
+     * @return filtered list of correct recipes
+     */
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    public static ArrayList<Recipe> filterOutIncompleteRecipes(ArrayList<Recipe> recipes){
+        if (recipes == null || recipes.isEmpty())
+            return recipes;
+        // get recipes with 1 or more instructions and 0 or more ingredients other than searched
+        return recipes.stream()
+                .filter(r -> (r.getIngredientsOtherThanSearched() >= 0
+                        && r.getInstructions() != null
+                        && r.getInstructions().length > 0)).
+                        collect(Collectors.toCollection(ArrayList::new));
     }
 }
